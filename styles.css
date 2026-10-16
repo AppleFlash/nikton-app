@@ -7,7 +7,7 @@ a{color:#4FE3A1}a:hover{color:#8AF0C2}
 .scroll::-webkit-scrollbar{display:none}
 .disp{font-family:'Unbounded',system-ui,sans-serif}
 .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--s1);border-radius:14px;border:1px solid var(--line)}
-.seg button{height:36px;border:0;border-radius:10px;background:transparent;color:var(--mu);font-weight:700;font-size:13px;cursor:pointer;transition:background .25s,color .25s}
+.seg button{height:32px;border:0;border-radius:10px;background:transparent;color:var(--mu);font-weight:700;font-size:13px;cursor:pointer;transition:background .25s,color .25s}
 .seg button.on{background:var(--s2);color:var(--tx);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 14px rgba(0,0,0,.35)}
 .icb{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--s1);display:grid;place-items:center;cursor:pointer;transition:transform .15s}
 .icb:active{transform:scale(.92)}
@@ -23,21 +23,21 @@ a{color:#4FE3A1}a:hover{color:#8AF0C2}
 @keyframes slzm0{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @keyframes slzm1{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 .grid7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.cell{position:relative;height:48px;border:0;background:transparent;border-radius:14px;cursor:pointer;display:grid;place-items:center;padding:0;transition:transform .15s,background .2s}
+.cell{position:relative;height:clamp(36px,11vw,52px);border:0;background:transparent;border-radius:14px;cursor:pointer;display:grid;place-items:center;padding:0;transition:transform .15s,background .2s}
 .cell:active{transform:scale(.9)}
 .cell:disabled{cursor:default}
 .cell .num{position:relative;z-index:2;font-size:15px;font-weight:700;color:var(--tx)}
 .cell.out .num{color:rgba(244,238,232,.22)}
 .cell.fut .num{color:rgba(244,238,232,.32)}
 .cell.none .num{color:rgba(244,238,232,.78)}
-.cell .mk{position:absolute;z-index:1;width:38px;height:38px;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+.cell .mk{position:absolute;z-index:1;height:84%;aspect-ratio:1;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
 .cell.clean .mk{border:1.5px solid rgba(79,227,161,.55);background:radial-gradient(circle at 50% 55%,rgba(79,227,161,.20),rgba(79,227,161,.04) 70%)}
 .cell.clean.t2 .mk{border-color:rgba(79,227,161,.8);background:radial-gradient(circle at 50% 55%,rgba(79,227,161,.32),rgba(79,227,161,.06) 70%);box-shadow:0 0 12px rgba(79,227,161,.25)}
 .cell.clean.t3 .mk{border:2px solid #4FE3A1;background:radial-gradient(circle at 50% 50%,rgba(79,227,161,.45),rgba(79,227,161,.10) 72%);box-shadow:0 0 18px rgba(79,227,161,.45),inset 0 0 10px rgba(79,227,161,.35)}
 .cell.clean .num{color:#E9FFF4}
 .cell.smoked .num{color:#E3DEE8;text-shadow:0 1px 6px rgba(0,0,0,.6)}
 .cell.out .mk,.cell.out .smk{opacity:.28}
-.smk{position:absolute;z-index:1;left:50%;top:50%;width:52px;height:52px;transform:translate(-50%,-50%);pointer-events:none;overflow:visible}
+.smk{position:absolute;z-index:1;left:50%;top:50%;height:118%;aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;overflow:visible}
 .smk .p1{animation:puff 5.5s ease-in-out infinite}
 .smk .p2{animation:puff 6.5s ease-in-out infinite reverse}
 .smk .w{animation:wisp 4s ease-in-out infinite}
@@ -91,10 +91,29 @@ a{color:#4FE3A1}a:hover{color:#8AF0C2}
 html,body{height:100%}
 body{display:flex;justify-content:center;font-family:'Manrope',system-ui,sans-serif;color:#F4EEE8;-webkit-font-smoothing:antialiased}
 .app{position:relative;width:100%;height:100vh;height:100dvh;overflow:hidden;background:#120B16}
-.app .inner{display:flex;flex-direction:column;gap:16px;padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+.app .inner{display:flex;flex-direction:column;gap:12px;padding:calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
 .sheet{padding-right:calc(16px + env(safe-area-inset-right));padding-bottom:calc(28px + env(safe-area-inset-bottom));padding-left:calc(16px + env(safe-area-inset-left))}
 .hidden-input{position:absolute;width:1px;height:1px;opacity:0}
 .wrow{position:relative;color:inherit}
 .app .btn-main{color:#2A0F2E}
 .app .btn-clean{color:#062417}
 .app .btn-smoked{color:#FF9A9D}
+
+.pill{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px 0 14px;border-radius:99px;border:1px solid;cursor:pointer}
+.pill .chev{transition:transform .25s}.pill .chev.up{transform:rotate(180deg)}
+.statline{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:32px;border:0;background:transparent;font-size:12px;font-weight:600;color:#A99CB2;cursor:pointer}
+.statline b{font-weight:800}
+.statline .sep{width:3px;height:3px;border-radius:50%;background:#4A3F52}
+.statline span{white-space:nowrap}@media (max-width:360px){.statline{font-size:11px;gap:7px}}
+.clp{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .55s cubic-bezier(.22,1,.36,1),opacity .35s ease}
+.clp>div{overflow:hidden;min-height:0}
+.stats.closed .sl-wrap{grid-template-rows:1fr;opacity:1;transition-delay:.12s,.18s}
+.stats.open .det-wrap{grid-template-rows:1fr;opacity:1}
+.stats.open .sl-wrap{transition-duration:.4s,.15s}
+.det{margin-top:2px;transform:translateY(-8px) scale(.97);transform-origin:50% 0;filter:blur(4px);transition:transform .55s cubic-bezier(.22,1,.36,1),filter .45s ease}
+.stats.open .det{transform:none;filter:none}
+.det .tile{opacity:0;transform:translateY(12px) scale(.94);transition:opacity .4s ease,transform .5s cubic-bezier(.34,1.56,.64,1)}
+.stats.open .det .tile{opacity:1;transform:none}
+.stats.open .det .tile:nth-child(1){transition-delay:.12s}.stats.open .det .tile:nth-child(2){transition-delay:.19s}.stats.open .det .tile:nth-child(3){transition-delay:.26s}
+.stats.open .det-wrap>div{padding-bottom:4px}
+@media (prefers-reduced-motion:reduce){.pill .chev,.clp,.det,.det .tile{transition:none!important}}

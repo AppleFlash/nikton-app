@@ -67,7 +67,7 @@ var params = new URLSearchParams(location.search);
 var stored = loadMarks();
 var S = {
   marks: stored || {},
-  view: 'month', cursor: today0(), slide: 'zm', slideN: 0,
+  view: 'month', cursor: today0(), slide: 'zm', slideN: 0, statsOpen: false,
   sheet: null,      // { date, stage: 'choose'|'anim', spec }
   dataOpen: false, dataMsg: '', dataError: false, importing: false,
   splash: params.get('splash') !== '0'
@@ -220,7 +220,7 @@ function renderMain() {
     for (var q = 1; q <= last.getDate(); q++) { var v = marks[keyOf(new Date(c.getFullYear(), c.getMonth(), q))]; if (v === 'clean') mc++; if (v === 'smoked') ms++; }
     navTitle = MONTHS[c.getMonth()] + ' ' + c.getFullYear();
     navSub = mc + ' без курения · ' + ms + ' ' + plural(ms, 'раз', 'раза', 'раз') + ' курил';
-    pane += '<div class="grid7" style="margin-bottom:6px">' + WD.map(function (w) { return '<span style="text-align:center;font-size:11px;font-weight:800;color:#7E7186;letter-spacing:.06em">' + w + '</span>'; }).join('') + '</div><div class="grid7" style="row-gap:6px">';
+    pane += '<div class="grid7" style="margin-bottom:6px">' + WD.map(function (w) { return '<span style="text-align:center;font-size:11px;font-weight:800;color:#7E7186;letter-spacing:.06em">' + w + '</span>'; }).join('') + '</div><div class="grid7" style="row-gap:4px">';
     for (var i = 0; i < n; i++) {
       var d = addDays(start, i), cc = cellOf(d, d.getMonth() === c.getMonth(), marks, t, tk);
       pane += '<button class="' + cc.cls + '" data-day="' + cc.k + '"' + (cc.disabled ? ' disabled' : '') + ' aria-label="' + esc(cc.aria) + '"><span class="mk"></span>' + (cc.mk === 'smoked' ? SMOKE_SVG : '') + '<span class="num">' + cc.label + '</span></button>';
@@ -257,6 +257,10 @@ function renderMain() {
     pane += '</div>';
   }
 
+  var pill = '<button class="pill" data-act="toggleStats" aria-controls="statsDetails" aria-expanded="' + !!S.statsOpen + '" aria-label="Серия: ' + hero.num + ' ' + hero.unit + '. ' + (S.statsOpen ? 'Скрыть' : 'Показать') + ' статистику" style="border-color:' + (cs.smoked ? 'rgba(185,178,191,.3)' : 'rgba(79,227,161,.35)') + ';background:' + (cs.smoked ? 'rgba(185,178,191,.08)' : 'rgba(79,227,161,.08)') + '">'
+    + '<span class="disp" style="font-size:18px;font-weight:700;color:' + hero.color + '">' + hero.num + '</span>'
+    + '<span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15"><span style="font-size:13px;font-weight:800;color:#F4EEE8">' + (cs.smoked ? 'сегодня курил' : dWord(cs.n) + ' без кальяна') + '</span><span style="font-size:11px;font-weight:600;color:#A99CB2">' + (cs.smoked ? 'новый отсчёт завтра' : cs.today ? 'текущая серия' : 'серия до вчера') + '</span></span>'
+    + '<svg class="chev' + (S.statsOpen ? ' up' : '') + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A99CB2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>';
   var seg = function (v, label) { return '<button class="' + (S.view === v ? 'on' : '') + '" data-view="' + v + '" role="tab" aria-selected="' + (S.view === v) + '">' + label + '</button>'; };
   var tile = function (label, val, unit, color) { return '<div class="tile"><span style="font-size:11px;font-weight:700;color:#A99CB2">' + label + '</span><span class="disp" style="font-size:22px;font-weight:700;color:' + color + '">' + val + '</span><span style="font-size:11px;color:#A99CB2">' + unit + '</span></div>'; };
 
@@ -264,28 +268,27 @@ function renderMain() {
     '<div class="inner">'
     + '<header style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="display:flex;align-items:center;gap:10px">'
     + '<div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(145deg,#F5A623,#B8487A);display:grid;place-items:center;box-shadow:0 6px 18px rgba(245,166,35,.25)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A0D1F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20c2-6 12-6 14 0"></path><circle cx="9" cy="10" r="1.6"></circle><circle cx="15" cy="10" r="1.6"></circle><path d="M6 6l2 2M18 6l-2 2"></path></svg></div>'
-    + '<div style="display:flex;flex-direction:column"><span class="disp" style="font-size:17px;font-weight:700;letter-spacing:.02em">Никтон</span><span style="font-size:12px;color:#A99CB2;font-weight:600">дневник без кальяна</span></div></div>'
+    + pill + '</div>'
     + '<button class="icb" data-act="openData" aria-label="Данные: выгрузка и загрузка истории"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC4D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"></ellipse><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"></path><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"></path></svg></button></header>'
-    + '<section style="position:relative;border-radius:24px;padding:18px 18px 16px;background:radial-gradient(120% 140% at 100% 0%,rgba(79,227,161,.16),rgba(79,227,161,0) 55%),linear-gradient(180deg,#1F1526,#170F1C);border:1px solid rgba(255,255,255,.07);overflow:hidden">'
-    + '<div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#A99CB2">' + hero.label + '</div>'
-    + '<div style="display:flex;align-items:baseline;gap:10px;margin-top:6px"><span class="disp" style="font-size:52px;line-height:1;font-weight:700;color:' + hero.color + '">' + hero.num + '</span><span style="font-size:18px;font-weight:700">' + hero.unit + '</span></div>'
-    + '<div style="margin-top:8px;font-size:14px;color:#CFC4D6;font-weight:600">' + hero.sub + '</div>'
-    + '<div style="margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7E7186">За всё время</div>'
+    + '<div id="stats" class="stats ' + (S.statsOpen ? 'open' : 'closed') + '">'
+    + '<div class="clp sl-wrap" aria-hidden="' + !!S.statsOpen + '"' + (S.statsOpen ? ' inert' : '') + '><div><button class="statline" data-act="toggleStats" aria-label="Показать статистику" aria-controls="statsDetails" aria-expanded="false"><span><b style="color:#4FE3A1">' + st.clean + '</b> без курения</span><span class="sep"></span><span><b style="color:#C9C2CF">' + st.smoked + '</b> курил</span><span class="sep"></span><span>рекорд <b style="color:#F5A623">' + st.best + '</b></span></button></div></div>'
+    + '<div id="statsDetails" class="clp det-wrap" aria-hidden="' + !S.statsOpen + '"' + (S.statsOpen ? '' : ' inert') + '><div><section class="det" style="border-radius:20px;padding:14px;background:radial-gradient(120% 140% at 100% 0%,rgba(79,227,161,.14),rgba(79,227,161,0) 55%),linear-gradient(180deg,#1F1526,#170F1C);border:1px solid rgba(255,255,255,.07)">'
+    + '<div style="font-size:13px;color:#CFC4D6;font-weight:600">' + hero.sub + '</div>'
+    + '<div style="margin-top:12px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7E7186">За всё время</div>'
     + '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px">'
     + tile('Без курения', st.clean, dWord(st.clean), '#4FE3A1') + tile('Курил', st.smoked, dWord(st.smoked), '#C9C2CF') + tile('Самый долгий', st.best, dWord(st.best) + ' подряд', '#F5A623')
-    + '</div></section>'
+    + '</div></section></div></div></div>'
     + '<div class="seg" role="tablist" aria-label="Масштаб календаря">' + seg('week', 'Неделя') + seg('month', 'Месяц') + seg('year', 'Год') + '</div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
     + '<button class="icb" data-act="prev"' + (canPrev ? '' : ' disabled') + ' aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4EEE8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>'
     + '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0"><span class="disp" style="font-size:18px;font-weight:700">' + navTitle + '</span><span style="font-size:12px;color:#A99CB2;font-weight:600">' + navSub + '</span>'
     + '<button class="chip" data-act="today" style="margin-top:4px;height:24px;padding:0 10px;font-size:11px;font-weight:600;color:#A99CB2;border-color:rgba(255,255,255,.08);background:transparent">Сегодня · ' + (S.view === 'week' ? 'К этой неделе' : 'К этому месяцу') + '</button></div>'
     + '<button class="icb" data-act="next" aria-label="Вперёд"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4EEE8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></button></div>'
-    + '<div class="pane" id="pane" style="min-height:330px"><div class="sl-' + S.slide + (S.slideN % 2) + '">' + pane + '</div></div>'
+    + '<div class="pane" id="pane"><div class="sl-' + S.slide + (S.slideN % 2) + '">' + pane + '</div></div>'
     + '<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 18px;font-size:12px;font-weight:700;color:#A99CB2">'
     + '<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #4FE3A1;background:rgba(79,227,161,.25);box-shadow:0 0 8px rgba(79,227,161,.4)"></span>без курения</span>'
     + '<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#B9B2BF,rgba(110,103,116,.2) 70%);filter:blur(.6px)"></span>курил</span>'
     + '<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:3px;border-radius:2px;background:#F5A623"></span>сегодня</span></div>'
-    + '<div style="text-align:center;font-size:12px;color:#7E7186;font-weight:600">Свайп влево и вправо — листать</div>'
     + '</div>';
 }
 
@@ -371,6 +374,18 @@ app.addEventListener('click', function (e) {
     case 'prev': return move(-1);
     case 'next': return move(1);
     case 'today': return goToday();
+    case 'toggleStats':
+      S.statsOpen = !S.statsOpen;
+      var box = document.getElementById('stats'), pl = document.querySelector('.pill');
+      box.classList.toggle('open', S.statsOpen); box.classList.toggle('closed', !S.statsOpen);
+      pl.setAttribute('aria-expanded', S.statsOpen);
+      pl.setAttribute('aria-label', pl.getAttribute('aria-label').replace(S.statsOpen ? 'Показать' : 'Скрыть', S.statsOpen ? 'Скрыть' : 'Показать'));
+      pl.querySelector('.chev').classList.toggle('up', S.statsOpen);
+      var summary = box.querySelector('.sl-wrap'), details = box.querySelector('.det-wrap');
+      if (summary.contains(document.activeElement)) pl.focus();
+      summary.inert = S.statsOpen; summary.setAttribute('aria-hidden', S.statsOpen);
+      details.inert = !S.statsOpen; details.setAttribute('aria-hidden', !S.statsOpen);
+      return;
     case 'markClean': return mark('clean');
     case 'markSmoked': return mark('smoked');
     case 'clearMark': return clearMark();
