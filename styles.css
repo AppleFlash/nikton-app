@@ -6,9 +6,10 @@ a{color:#4FE3A1}a:hover{color:#8AF0C2}
 .scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
 .disp{font-family:'Unbounded',system-ui,sans-serif}
-.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--s1);border-radius:14px;border:1px solid var(--line)}
-.seg button{height:32px;border:0;border-radius:10px;background:transparent;color:var(--mu);font-weight:700;font-size:13px;cursor:pointer;transition:background .25s,color .25s}
-.seg button.on{background:var(--s2);color:var(--tx);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 14px rgba(0,0,0,.35)}
+.seg{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--s1);border-radius:14px;border:1px solid var(--line)}
+.seg-indicator{position:absolute;top:4px;bottom:4px;left:calc(4px + var(--period) * ((100% - 4px) / 3));width:calc((100% - 16px) / 3);border-radius:10px;background:var(--s2);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 14px rgba(0,0,0,.35);pointer-events:none}
+.seg button{position:relative;height:32px;border:0;border-radius:10px;background:transparent;color:var(--mu);font-weight:700;font-size:13px;cursor:pointer;transition:color .2s}
+.seg button.on{color:var(--tx)}
 .icb{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--s1);display:grid;place-items:center;cursor:pointer;transition:transform .15s}
 .icb:active{transform:scale(.92)}
 .chip{height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--mu);font-size:12px;font-weight:700;cursor:pointer}

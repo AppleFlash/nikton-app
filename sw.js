@@ -1,7 +1,7 @@
 'use strict';
 
 const PREFIX = 'nikton-pwa:' + self.registration.scope + ':';
-const CACHE = PREFIX + 'v1';
+const CACHE = PREFIX + 'v3';
 const FILES = [
   'index.html', 'styles.css', 'app.js', 'nikton.js', 'pwa.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

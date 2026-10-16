@@ -12,6 +12,7 @@ class FixedDate extends Date {
 function start(marks = {}, options = {}) {
   const nodes = new Map(), storage = new Map([[storeKey, JSON.stringify(marks)]]), confirmations = [];
   const document = {
+    querySelector() { return null; },
     getElementById(id) {
       if (!nodes.has(id)) nodes.set(id, {
         innerHTML: '', firstChild: null, listeners: {},

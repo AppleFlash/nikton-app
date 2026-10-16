@@ -202,6 +202,9 @@ function cellOf(d, inMonth, marks, t, tk) {
 }
 
 function renderMain() {
+  var previousIndicator = document.querySelector('.seg-indicator');
+  var previousLeft = previousIndicator && previousIndicator.dataset.period !== S.view ? previousIndicator.getBoundingClientRect().left : null;
+  var periodFocused = document.activeElement && document.activeElement.matches('.seg button');
   var marks = S.marks, t = today0(), tk = keyOf(t), minMonth = firstMonth(), minCursor = periodStart(minMonth, S.view);
   if (periodStart(S.cursor, S.view) < minCursor) S.cursor = minCursor;
   var c = S.cursor, canPrev = periodStart(c, S.view) > minCursor;
@@ -278,7 +281,7 @@ function renderMain() {
     + '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px">'
     + tile('Без курения', st.clean, dWord(st.clean), '#4FE3A1') + tile('Курил', st.smoked, dWord(st.smoked), '#C9C2CF') + tile('Самый долгий', st.best, dWord(st.best) + ' подряд', '#F5A623')
     + '</div></section></div></div></div>'
-    + '<div class="seg" role="tablist" aria-label="Масштаб календаря">' + seg('week', 'Неделя') + seg('month', 'Месяц') + seg('year', 'Год') + '</div>'
+    + '<div class="seg" role="tablist" aria-label="Масштаб календаря" style="--period:' + ['week', 'month', 'year'].indexOf(S.view) + '"><span class="seg-indicator" data-period="' + S.view + '" aria-hidden="true"></span>' + seg('week', 'Неделя') + seg('month', 'Месяц') + seg('year', 'Год') + '</div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
     + '<button class="icb" data-act="prev"' + (canPrev ? '' : ' disabled') + ' aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4EEE8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>'
     + '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0"><span class="disp" style="font-size:18px;font-weight:700">' + navTitle + '</span><span style="font-size:12px;color:#A99CB2;font-weight:600">' + navSub + '</span>'
@@ -290,6 +293,14 @@ function renderMain() {
     + '<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#B9B2BF,rgba(110,103,116,.2) 70%);filter:blur(.6px)"></span>курил</span>'
     + '<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:3px;border-radius:2px;background:#F5A623"></span>сегодня</span></div>'
     + '</div>';
+  if (periodFocused) document.querySelector('.seg .on').focus({ preventScroll: true });
+  if (previousLeft !== null && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    var indicator = document.querySelector('.seg-indicator');
+    if (indicator.animate) indicator.animate([
+      { transform: 'translateX(' + (previousLeft - indicator.getBoundingClientRect().left) + 'px)' },
+      { transform: 'translateX(0px)' }
+    ], { duration: 200, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+  }
 }
 
 // ---------- render: day sheet ----------
