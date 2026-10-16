@@ -1,44 +1,5 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-
-const source = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
-const storeKey = 'nikton.marks.v1';
-class FixedDate extends Date {
-  constructor(...args) { super(...(args.length ? args : [2026, 9, 17, 12])); }
-}
-
-function start(marks = {}) {
-  const nodes = new Map(), handlers = {}, storage = new Map([[storeKey, JSON.stringify(marks)]]);
-  const document = {
-    getElementById(id) {
-      if (!nodes.has(id)) nodes.set(id, { innerHTML: '', firstChild: null, addEventListener() {} });
-      return nodes.get(id);
-    },
-    addEventListener() {}
-  };
-  document.getElementById('app').addEventListener = (name, fn) => { handlers[name] = fn; };
-  const window = { localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) } };
-  vm.runInNewContext(source, { document, window, Date: FixedDate, location: { search: '?splash=0' }, URLSearchParams, setTimeout: fn => fn() });
-  const html = () => document.getElementById('main').innerHTML;
-  return {
-    text: () => html().replace(/<[^>]*>/g, ' '),
-    disabled(attribute, value) {
-      const tag = [...html().matchAll(/<button\b([^>]*)>/g)].find(match => match[1].includes(`${attribute}="${value}"`));
-      assert.ok(tag, `Missing button ${attribute}=${value}`);
-      return /\bdisabled\b/.test(tag[1]);
-    },
-    days: () => [...html().matchAll(/data-day="([^"]+)"/g)].map(match => match[1]),
-    marks: () => JSON.parse(storage.get(storeKey)),
-    click(dataset) { handlers.click({ target: { closest: () => ({ dataset, disabled: false }) } }); },
-    swipeBack() {
-      const target = { closest: () => ({}) };
-      handlers.pointerdown({ target, clientX: 40, clientY: 100 });
-      handlers.pointerup({ target, clientX: 140, clientY: 100 });
-    }
-  };
-}
+const { start } = require('./harness.cjs');
 
 const empty = start();
 assert.equal(empty.disabled('data-act', 'prev'), true, 'Empty history starts at the current month');

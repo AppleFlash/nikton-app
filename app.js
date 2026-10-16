@@ -25,7 +25,14 @@ function phaseInfo(n) {
   return { title: 'Никтон ещё тянет к себе', sub: 'Первый день — самый трудный. Ты справился.' };
 }
 function loadMarks() { try { var s = window.localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
-function saveMarks(m) { try { window.localStorage.setItem(STORE_KEY, JSON.stringify(m)); } catch (e) {} }
+function saveMarks(m) {
+  try { window.localStorage.setItem(STORE_KEY, JSON.stringify(m)); return true; }
+  catch (e) {
+    S.dataOpen = true; S.dataError = true;
+    S.dataMsg = 'Не удалось сохранить историю на устройстве. Проверьте свободное место и настройки браузера.';
+    renderData(); return false;
+  }
+}
 function stats(marks) {
   var keys = Object.keys(marks).sort(), clean = 0, smoked = 0, best = 0, run = 0, prev = null;
   keys.forEach(function (k) {
@@ -62,7 +69,7 @@ var S = {
   marks: stored || {},
   view: 'month', cursor: today0(), slide: 'zm', slideN: 0,
   sheet: null,      // { date, stage: 'choose'|'anim', spec }
-  dataOpen: false, dataMsg: '',
+  dataOpen: false, dataMsg: '', dataError: false, importing: false,
   splash: params.get('splash') !== '0'
 };
 var swiped = false, px = null, py = null;
@@ -116,25 +123,72 @@ function openDay(k) {
 }
 function mark(kind) {
   var sh = S.sheet; if (!sh) return;
-  S.marks = Object.assign({}, S.marks); S.marks[keyOf(sh.date)] = kind; saveMarks(S.marks);
+  var marks = Object.assign({}, S.marks); marks[keyOf(sh.date)] = kind;
+  if (!saveMarks(marks)) return;
+  S.marks = marks;
   sh.stage = 'anim';
   sh.spec = kind === 'smoked' ? { smoked: true, n: 0 } : { smoked: false, n: streakAt(S.marks, sh.date) };
   renderMain(); renderSheet();
 }
 function clearMark() {
-  var m = Object.assign({}, S.marks); delete m[keyOf(S.sheet.date)]; S.marks = m; saveMarks(m);
+  var m = Object.assign({}, S.marks); delete m[keyOf(S.sheet.date)];
+  if (!saveMarks(m)) return;
+  S.marks = m;
   S.sheet = null; renderMain(); renderSheet();
 }
 function closeSheet() { S.sheet = null; renderSheet(); }
 
-// TODO(export): выгрузить { version: 1, marks: S.marks } в файл nikton-history.json
 function exportJson() {
-  S.dataMsg = 'Здесь начнётся скачивание файла nikton-history.json'; renderData();
+  var url, link;
+  S.dataError = false;
+  try {
+    var blob = new Blob([JSON.stringify({ version: 1, marks: S.marks }, null, 2)], { type: 'application/json' });
+    url = URL.createObjectURL(blob);
+    link = document.createElement('a'); link.href = url; link.download = 'nikton-history.json';
+    document.body.appendChild(link); link.click();
+    S.dataMsg = 'Скачивание nikton-history.json началось.';
+  } catch (e) {
+    S.dataError = true; S.dataMsg = 'Не удалось выгрузить историю. Попробуйте ещё раз.';
+  } finally {
+    if (link) link.remove();
+    if (url) setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    renderData();
+  }
 }
-// TODO(import): прочитать файл, проверить формат { version: 1, marks: {...} },
-// затем: S.marks = data.marks; saveMarks(S.marks); renderMain();
-function importJson(file) {
-  S.dataMsg = file ? 'Файл «' + file.name + '» выбран — здесь применится история' : ''; renderData();
+async function importJson(file) {
+  if (!file || S.importing) return;
+  S.importing = true; S.dataError = false; S.dataMsg = 'Читаем файл…'; renderData();
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new Error('Файл слишком большой. Максимальный размер — 5 МБ.');
+    var text, data;
+    try { text = await file.text(); }
+    catch (e) { throw new Error('Не удалось прочитать файл. Выберите его ещё раз.'); }
+    try { data = JSON.parse(text.replace(/^\uFEFF/, '')); }
+    catch (e) { throw new Error('Файл содержит некорректный JSON.'); }
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.version !== 1 || !data.marks || typeof data.marks !== 'object' || Array.isArray(data.marks)) {
+      throw new Error('Неверный формат истории. Выберите JSON-файл, выгруженный из Никтона.');
+    }
+    var keys = Object.keys(data.marks), today = today0();
+    keys.forEach(function (k) {
+      var d = parseKey(k);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || keyOf(d) !== k) throw new Error('В истории есть некорректные даты. Используйте формат ГГГГ-ММ-ДД.');
+      if (d > today) throw new Error('История содержит отметки за будущие дни.');
+      if (data.marks[k] !== 'clean' && data.marks[k] !== 'smoked') throw new Error('В истории есть неизвестный тип отметки.');
+    });
+    if (!S.dataOpen) return;
+    var cnt = keys.length, current = Object.keys(S.marks).length;
+    if (!window.confirm('Загрузить историю из файла «' + file.name + '» (' + cnt + ' ' + plural(cnt, 'отметка', 'отметки', 'отметок') + ')?\n\nТекущая история (' + current + ' ' + plural(current, 'отметка', 'отметки', 'отметок') + ') будет полностью заменена.')) {
+      S.dataMsg = 'Загрузка отменена. История не изменена.'; return;
+    }
+    if (!saveMarks(data.marks)) return;
+    S.marks = data.marks; S.sheet = null; S.splash = false;
+    renderMain(); renderSheet(); renderSplash();
+    S.dataMsg = 'Загружено: ' + cnt + ' ' + plural(cnt, 'отметка', 'отметки', 'отметок') + '.';
+  } catch (e) {
+    S.dataError = true; S.dataMsg = e.message;
+  } finally {
+    S.importing = false; renderData();
+  }
 }
 
 // ---------- render: main ----------
@@ -240,7 +294,7 @@ function renderSheet() {
   var root = document.getElementById('sheet'), sh = S.sheet;
   if (!sh) { if (!S.splash) stopMonster(); root.innerHTML = ''; return; }
   var k = keyOf(sh.date), mk = S.marks[k], tk = keyOf(today0());
-  var head = '<div class="grab"></div><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="display:flex;flex-direction:column;gap:4px">'
+  var head = '<div class="grab"></div><div class="sheet-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="display:flex;flex-direction:column;gap:4px">'
     + '<span style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#A99CB2">' + (k === tk ? 'Сегодня · ' : '') + WD_FULL[wdIdx(sh.date)] + '</span>'
     + '<span class="disp" style="font-size:24px;font-weight:700">' + sh.date.getDate() + ' ' + MONTHS_GEN[sh.date.getMonth()] + '</span></div>'
     + '<button class="icb" data-act="closeSheet" aria-label="Закрыть">' + ICON_CLOSE + '</button></div>';
@@ -260,7 +314,7 @@ function renderSheet() {
       + '<button class="btn-main" data-act="closeSheet">Готово</button></div>';
   }
   var reopen = !root.firstChild;
-  root.innerHTML = '<div class="ovl"><button class="scrim" data-act="closeSheet" aria-label="Закрыть"' + (reopen ? '' : ' style="animation:none"') + '></button><div class="sheet" role="dialog" aria-modal="true"' + (reopen ? '' : ' style="animation:none"') + '>' + head + body + '</div></div>';
+  root.innerHTML = '<div class="ovl"><button class="scrim" data-act="closeSheet" aria-label="Закрыть"' + (reopen ? '' : ' style="animation:none"') + '></button><div class="sheet" role="dialog" aria-modal="true">' + head + body + '</div></div>';
   if (sh.stage === 'anim') mountMonster(document.getElementById('sheetHost'), sh.spec);
 }
 
@@ -269,16 +323,17 @@ function renderData() {
   var root = document.getElementById('data');
   if (!S.dataOpen) { root.innerHTML = ''; return; }
   var cnt = Object.keys(S.marks).length, reopen = !root.firstChild, na = reopen ? '' : ' style="animation:none"';
-  root.innerHTML = '<div class="ovl"><button class="scrim" data-act="closeData" aria-label="Закрыть"' + na + '></button><div class="sheet" role="dialog" aria-modal="true" aria-label="Данные"' + na + '>'
-    + '<div class="grab"></div><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#A99CB2">Сервис</span><span class="disp" style="font-size:24px;font-weight:700">Данные</span></div>'
+  var tone = S.dataError ? '229,72,77' : '79,227,161';
+  root.innerHTML = '<div class="ovl"><button class="scrim" data-act="closeData" aria-label="Закрыть"' + na + '></button><div class="sheet" role="dialog" aria-modal="true" aria-label="Данные">'
+    + '<div class="grab"></div><div class="sheet-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#A99CB2">Сервис</span><span class="disp" style="font-size:24px;font-weight:700">Данные</span></div>'
     + '<button class="icb" data-act="closeData" aria-label="Закрыть">' + ICON_CLOSE + '</button></div>'
     + '<div style="margin-top:8px;font-size:14px;color:#CFC4D6;font-weight:600;line-height:1.45">История хранится на этом устройстве. Сохрани копию или перенеси отметки с другого телефона.</div>'
     + '<div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">'
-    + '<button class="wrow" data-act="export" style="padding:12px 14px"><span style="width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;background:rgba(79,227,161,.12);border:1px solid rgba(79,227,161,.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4FE3A1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg></span>'
+    + '<button class="wrow" data-act="export"' + (S.importing ? ' disabled' : '') + ' style="padding:12px 14px"><span style="width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;background:rgba(79,227,161,.12);border:1px solid rgba(79,227,161,.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4FE3A1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg></span>'
     + '<span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:15px;font-weight:800;color:#F4EEE8">Выгрузить историю</span><span style="font-size:12px;font-weight:600;color:#A99CB2">' + cnt + ' ' + plural(cnt, 'отметка', 'отметки', 'отметок') + ' · файл .json</span></span></button>'
-    + '<label class="wrow" style="padding:12px 14px"><input type="file" id="importInput" class="hidden-input" accept="application/json,.json"><span style="width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg></span>'
+    + '<label class="wrow" style="padding:12px 14px"><input type="file" id="importInput" class="hidden-input" accept="application/json,.json"' + (S.importing ? ' disabled' : '') + '><span style="width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg></span>'
     + '<span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:15px;font-weight:800;color:#F4EEE8">Загрузить из JSON</span><span style="font-size:12px;font-weight:600;color:#A99CB2">Заменит текущие отметки</span></span></label>'
-    + (S.dataMsg ? '<div role="status" style="padding:10px 14px;border-radius:14px;background:rgba(79,227,161,.10);border:1px solid rgba(79,227,161,.3);color:#8AF0C2;font-size:13px;font-weight:700">' + esc(S.dataMsg) + '</div>' : '')
+    + (S.dataMsg ? '<div role="' + (S.dataError ? 'alert' : 'status') + '" style="padding:10px 14px;border-radius:14px;background:rgba(' + tone + ',.10);border:1px solid rgba(' + tone + ',.3);color:' + (S.dataError ? '#FF9A9D' : '#8AF0C2') + ';font-size:13px;font-weight:700">' + esc(S.dataMsg) + '</div>' : '')
     + '<div style="font-size:11px;color:#7E7186;font-weight:600;line-height:1.5;font-family:ui-monospace,monospace">{ "version": 1, "marks": { "2026-10-16": "clean", "2026-10-12": "smoked" } }</div>'
     + '</div></div></div>';
   document.getElementById('importInput').addEventListener('change', function (e) { importJson(e.target.files && e.target.files[0]); });
